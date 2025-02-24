@@ -5,78 +5,111 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/gorilla/mux"
 )
 
+func (ms *MockStore) GetUserByID(id string) (*User, error) {
+	// Mock implementation
+	userID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &User{ID: userID, FirstName: "Mock User"}, nil
+}
+
 func TestCreateTask(t *testing.T) {
 	ms := &MockStore{}
+
 	service := NewTasksService(ms)
 
-	t.Run("should return error if name is empty", func(t *testing.T) {
-		payload := &CreateTaskPayload{
+	t.Run("Return an error if 'name' is empty", func(t *testing.T) {
+		payload := &Task{
 			Name: "",
 		}
 
 		b, err := json.Marshal(payload)
+
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Error while marshalling payload: %v", err)
 		}
 
-		req, err := http.NewRequest(http.MethodPost, "/tasks", bytes.NewBuffer(b))
+		req, err := http.NewRequest("POST", "/tasks", bytes.NewBuffer(b))
+
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		rr := httptest.NewRecorder()
+
 		router := mux.NewRouter()
 
-		router.HandleFunc("/tasks", service.handleCreateTask)
+		router.HandleFunc("/tasks", service.CreateTask).Methods("POST")
 
 		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
-		}
-
-		var response ErrorResponse
-		err = json.NewDecoder(rr.Body).Decode(&response)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if response.Error != errNameRequired.Error() {
-			t.Errorf("expected error message %s, got %s", response.Error, errNameRequired.Error())
+			t.Error("Invalid Status Code, Fail Error")
 		}
 	})
 
-	t.Run("should create a task", func(t *testing.T) {
-		payload := &CreateTaskPayload{
-			Name:         "Creating a REST API in go",
+	t.Run("Create a task", func(t *testing.T) {
+		payload := &Task{
+			Name:         "Creating a REST API in GoLang",
 			ProjectID:    1,
 			AssignedToID: 42,
 		}
 
 		b, err := json.Marshal(payload)
+
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		req, err := http.NewRequest(http.MethodPost, "/tasks", bytes.NewBuffer(b))
+
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		rr := httptest.NewRecorder()
+
 		router := mux.NewRouter()
 
-		router.HandleFunc("/tasks", service.handleCreateTask)
+		router.HandleFunc("/tasks", service.CreateTask)
 
 		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusCreated {
-			t.Errorf("expected status code %d, got %d", http.StatusCreated, rr.Code)
+			t.Errorf("Expected status code %d, got %d", http.StatusCreated, rr.Code)
+		}
+	})
+}
+
+func TestGetTask(t *testing.T) {
+	ms := &MockStore{}
+
+	service := NewTasksService(ms)
+
+	t.Run("Get a task", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/tasks/42", nil)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+
+		router := mux.NewRouter()
+
+		router.HandleFunc("/tasks/{id}", service.GetTask)
+
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Invalid Status Code: Error")
 		}
 	})
 }

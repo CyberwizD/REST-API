@@ -22,23 +22,31 @@ func NewTasksService(s Store) *TasksService {
 }
 
 func (s *TasksService) RegisterRoutes(r *mux.Router) {
-	r.HandleFunc("/tasks", WithJWTAuth(s.handleCreateTask, s.store)).Methods("POST")
-	r.HandleFunc("/tasks/{id}", WithJWTAuth(s.handleGetTask, s.store)).Methods("GET")
+	r.HandleFunc("/tasks", WithJWTAuth(s.CreateTask, s.store)).Methods("POST")
+	r.HandleFunc("/tasks/{id}", WithJWTAuth(s.GetTask, s.store)).Methods("GET")
+	r.HandleFunc("/tasks/{id}", s.UpdateTask).Methods("PUT")
+	r.HandleFunc("/tasks/{id}", s.DeleteTask).Methods("DELETE")
 }
 
-func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+func (s *TasksService) CreateTask(w http.ResponseWriter, r *http.Request) {
+	// Create a task
+
 	body, err := io.ReadAll(r.Body)
+
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusBadRequest)
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload!"})
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
 	defer r.Body.Close()
 
 	var task *Task
+
 	err = json.Unmarshal(body, &task)
+
 	if err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload!"})
 		return
 	}
 
@@ -48,6 +56,7 @@ func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) 
 	}
 
 	t, err := s.store.CreateTask(task)
+
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating task"})
 		return
@@ -56,8 +65,28 @@ func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) 
 	WriteJSON(w, http.StatusCreated, t)
 }
 
-func (s *TasksService) handleGetTask(w http.ResponseWriter, r *http.Request) {
+func (s *TasksService) GetTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 
+	id := vars["id"]
+
+	if id == "" {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "ID is required"})
+		return
+	}
+
+	t, err := s.store.GetTask(id)
+
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Task not found"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(t)
+
+	WriteJSON(w, http.StatusOK, t)
 }
 
 func validateTaskPayload(task *Task) error {
@@ -74,4 +103,12 @@ func validateTaskPayload(task *Task) error {
 	}
 
 	return nil
+}
+
+func (s *TasksService) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	// Update a task
+}
+
+func (s *TasksService) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	// Delete a task
 }
