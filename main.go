@@ -20,14 +20,12 @@ func main() {
 	sqlStorage := NewMySQLStorage(cfg)
 
 	db, err := sqlStorage.Init()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	store := NewStore(db)
 
-	api := NewAPIServer(":8080", store)
-
-	api.Serve()
+	server := NewAPIServer(":8080", store)
+	server.Serve()
 }
