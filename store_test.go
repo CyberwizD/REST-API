@@ -4,8 +4,14 @@ package main
 
 type MockStore struct{}
 
-func (m *MockStore) CreateUser() error {
-	return nil
+// func (m *MockStore) CreateUser() error {
+// 	return nil
+// }
+
+func (ms *MockStore) CreateUser(user *User) (*User, error) {
+	// Mock implementation
+	user.ID = 1
+	return user, nil
 }
 
 func (m *MockStore) CreateTask(t *Task) (*Task, error) {
