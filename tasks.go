@@ -22,8 +22,8 @@ func NewTasksService(s Store) *TasksService {
 }
 
 func (s *TasksService) RegisterRoutes(r *mux.Router) {
-	r.HandleFunc("/tasks", s.CreateTask).Methods("POST")
-	r.HandleFunc("/tasks/{id}", s.GetTask).Methods("GET")
+	r.HandleFunc("/tasks", WithJWTAuth(s.CreateTask, s.store)).Methods("POST")
+	r.HandleFunc("/tasks/{id}", WithJWTAuth(s.GetTask, s.store)).Methods("GET")
 	r.HandleFunc("/tasks/{id}", s.UpdateTask).Methods("PUT")
 	r.HandleFunc("/tasks/{id}", s.DeleteTask).Methods("DELETE")
 }
@@ -65,7 +65,7 @@ func (s *TasksService) CreateTask(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusCreated, t)
 }
 
-func (s *TasksService) handleGetTask(w http.ResponseWriter, r *http.Request) {
+func (s *TasksService) GetTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	id := vars["id"]
@@ -81,6 +81,10 @@ func (s *TasksService) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Task not found"})
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(t)
 
 	WriteJSON(w, http.StatusOK, t)
 }
@@ -99,10 +103,6 @@ func validateTaskPayload(task *Task) error {
 	}
 
 	return nil
-}
-
-func (s *TasksService) GetTask(w http.ResponseWriter, r *http.Request) {
-	// Get a task
 }
 
 func (s *TasksService) UpdateTask(w http.ResponseWriter, r *http.Request) {

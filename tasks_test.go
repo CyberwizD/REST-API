@@ -5,10 +5,20 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/gorilla/mux"
 )
+
+func (ms *MockStore) GetUserByID(id string) (*User, error) {
+	// Mock implementation
+	userID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &User{ID: userID, FirstName: "Mock User"}, nil
+}
 
 func TestCreateTask(t *testing.T) {
 	ms := &MockStore{}
@@ -94,7 +104,7 @@ func TestGetTask(t *testing.T) {
 
 		router := mux.NewRouter()
 
-		router.HandleFunc("/tasks/{id}", service.handleGetTask)
+		router.HandleFunc("/tasks/{id}", service.GetTask)
 
 		router.ServeHTTP(rr, req)
 
